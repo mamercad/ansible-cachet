@@ -1,0 +1,7 @@
+---
+# handlers file for ansible-cachet
+
+- name: restart-httpd24-httpd
+  service:
+    name: httpd24-httpd
+    state: restarted

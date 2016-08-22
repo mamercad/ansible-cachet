@@ -1,0 +1,15 @@
+<VirtualHost *:80>
+    ServerName {{ apache24.servername }}
+    # Or whatever you want to use
+    ServerAlias apache24.servername
+    # Make this the same as ServerName
+    DocumentRoot "{{ cachet.basedir }}/public"
+    <Directory "{{ cachet.basedir }}/public">
+        Require all granted
+        # Used by Apache 2.4
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Order allow,deny
+        Allow from all
+    </Directory>
+</VirtualHost>

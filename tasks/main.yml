@@ -1,0 +1,135 @@
+---
+
+# cachet installation: https://docs.cachethq.io/docs/installing-cachet
+
+#
+# Prerequisites
+#
+
+- name: selinux -> permissive
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: install redhat software collections
+  yum:
+    name: centos-release-scl # need php 5.5.x
+    state: present
+
+- name: install prerequisites
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - git-core
+    - php55
+    - php55-php
+    - php55-php-cli
+    - php55-php-gd
+    - php55-php-xml
+    - php55-php-mbstring
+    - php55-php-mysqlnd
+    - redis
+    - mariadb-server
+    - httpd24-httpd
+    - MySQL-python
+
+#
+# Services
+#
+
+- name: start and enable services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - redis
+    - mariadb
+    - httpd24-httpd
+
+#
+# MySQL (MariaDB)
+#
+
+- name: create cachet mysql database
+  mysql_db:
+    name: cachet
+    state: present
+
+- name: create homestead mysql user
+  mysql_user:
+    name: homestead
+    password: secret
+    priv: cachet.*:ALL
+    state: present
+
+#
+# Composer
+#
+
+- name: fetch the composer installer
+  get_url:
+    url: "{{ composer.installer }}"
+    sha256sum: "{{ composer.sha256sum }}"
+    dest: "{{ composer.stagedir }}"
+
+- name: install composer
+  shell: source {{ php55.enable }} && php {{ composer.stagedir }}/installer --install-dir={{ composer.basedir}} --filename=composer
+  args:
+    chdir: "{{ composer.stagedir }}"
+    creates: "{{ composer.basedir}}/{{ composer.executable }}"
+
+#
+# Cachet
+#
+
+- name: download the Cachet source
+  git:
+    repo: "{{ cachet.gitrepo }}"
+    dest: "{{ cachet.basedir }}"
+    version: "{{ cachet.version }}"
+
+- name: let apache own Cachet
+  file:
+    name: "{{ cachet.basedir }}"
+    owner: apache
+    group: apache
+    recurse: yes
+
+- name: run composer for Cachet
+  shell: source {{ php55.enable }} && {{ composer.basedir}}/{{ composer.executable }} install --no-dev -o
+  args:
+    chdir: "{{ cachet.basedir }}"
+  become_user: apache
+
+- name: deploy Cachet's .env
+  template:
+    src: .env.j2
+    dest: "{{ cachet.basedir }}/.env"
+    owner: apache
+    group: apache
+    mode: 0644
+    backup: yes
+
+- name: generate Cachet's app key
+  shell: source {{ php55.enable }} && php artisan key:generate
+  args:
+    chdir: "{{ cachet.basedir }}"
+  become_user: apache
+
+- name: install Cachet
+  shell: source {{ php55.enable }} && php artisan app:install
+  args:
+    chdir: "{{ cachet.basedir }}"
+  become_user: apache
+
+- name: deploy apache's cachet.conf
+  template:
+    src: cachet.conf.j2
+    dest: "{{ apache24.rootdir }}/etc/httpd/conf.d/cachet.conf"
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify: restart-httpd24-httpd

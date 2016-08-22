@@ -1,0 +1,37 @@
+---
+# vars file for ansible-cachet
+
+apache24:
+    rootdir: /opt/rh/httpd24/root
+    servername: localhost
+
+cachet:
+    gitrepo: https://github.com/CachetHQ/Cachet.git
+    version: v2.3.10
+    basedir: /opt/Cachet
+
+composer:
+    installer: https://getcomposer.org/installer
+    sha256sum: 5af00ed7dbe47d849eca28cd44b6064d34b362ce20ba465652d72b4d121134b1
+    stagedir: /tmp
+    basedir: /usr/local/bin
+    executable: composer
+
+mail:
+    host: localhost
+    port: 25
+    username: cachet
+    password: secret
+    email: cachet@localhost
+
+mysql:
+    hostname: localhost
+    dbname: cachet
+    username: homestead
+    password: secret
+
+php55:
+    enable: /opt/rh/php55/enable
+
+redis:
+    host: localhost
